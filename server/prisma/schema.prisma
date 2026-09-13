@@ -1,0 +1,114 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  runtime      = "nodejs"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum NodeType {
+  trigger
+  http
+  delay
+  condition
+  transform
+}
+
+enum RunStatus {
+  running
+  success
+  failed
+}
+
+enum NodeRunStatus {
+  running
+  success
+  failed
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  workflows    Workflow[]
+}
+
+model Workflow {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  nodes     Node[]
+  edges     Edge[]
+  runs      Run[]
+
+  @@index([userId])
+}
+
+model Node {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  type       NodeType
+  config     Json
+  positionX  Float
+  positionY  Float
+
+  outgoingEdges Edge[]    @relation("EdgeSource")
+  incomingEdges Edge[]    @relation("EdgeTarget")
+  nodeRuns      NodeRun[]
+
+  @@index([workflowId])
+}
+
+model Edge {
+  id           String   @id @default(cuid())
+  workflowId   String
+  workflow     Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sourceNodeId String
+  source       Node     @relation("EdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNodeId String
+  target       Node     @relation("EdgeTarget", fields: [targetNodeId], references: [id], onDelete: Cascade)
+  branchLabel  String?
+
+  @@index([workflowId])
+}
+
+model Run {
+  id             String    @id @default(cuid())
+  workflowId     String
+  workflow       Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  status         RunStatus @default(running)
+  triggerPayload Json?
+  startedAt      DateTime  @default(now())
+  finishedAt     DateTime?
+  nodeRuns       NodeRun[]
+
+  @@index([workflowId])
+}
+
+model NodeRun {
+  id         String        @id @default(cuid())
+  runId      String
+  run        Run           @relation(fields: [runId], references: [id], onDelete: Cascade)
+  nodeId     String?
+  node       Node?         @relation(fields: [nodeId], references: [id], onDelete: SetNull)
+  type       NodeType      // snapshot
+  config     Json          // snapshot of the config used for THIS attempt
+  attempt    Int
+  status     NodeRunStatus @default(running)
+  input      Json?
+  output     Json?
+  error      String?
+  startedAt  DateTime      @default(now())
+  finishedAt DateTime?
+
+  @@unique([runId, nodeId, attempt])
+  @@index([runId])
+}

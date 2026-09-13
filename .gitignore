@@ -11,6 +11,8 @@ dist-ssr
 .env.*
 !.env.example
 
+server/src/generated/
+
 # logs
 *.log
 npm-debug.log*
@@ -20,3 +22,4 @@ npm-debug.log*
 !.vscode/extensions.json
 .idea
 .DS_Store
+cookies.txt
