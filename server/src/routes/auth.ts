@@ -19,20 +19,20 @@ function isUniqueViolation(err: unknown): boolean {
 export const authRouter = Router();
 
 authRouter.post("/register", validate(registerSchema), async (req, res) => {
-  const { email, password } = req.body as RegisterInput; // sound: validate() ran first
+  const { email, password } = req.body as RegisterInput; 
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
 
   try {
     const user = await prisma.user.create({
       data: { email, passwordHash },
-      select: { id: true, email: true }, // passwordHash can't leak — not selected
+      select: { id: true, email: true }, 
     });
     res.status(201).json({ user });
   } catch (err) {
     if (isUniqueViolation(err)) {
       throw new ConflictError("EMAIL_ALREADY_REGISTERED", "Email is already registered");
     }
-    throw err; // unknown → central handler → 500
+    throw err; 
   }
 });
 

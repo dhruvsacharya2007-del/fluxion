@@ -109,3 +109,10 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* client/src/index.css */
+.screen { max-width: 22rem; margin: 4rem auto; display: flex; flex-direction: column; gap: .75rem; font-family: system-ui, sans-serif; }
+.screen label { display: flex; flex-direction: column; gap: .25rem; }
+.screen input { padding: .5rem; }
+.form-error { color: #b00020; }
+.field-error { color: #b00020; font-size: .85rem; margin: 0; }
