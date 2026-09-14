@@ -19,6 +19,44 @@ export const loginSchema = z.object({
   password: z.string().min(1, { error: "Password is required" }),
 });
 
+export const createWorkflowSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(120, "Name too long"),
+});
+export type CreateWorkflowInput = z.infer<typeof createWorkflowSchema>;
+
+// ── List item / create response: metadata only, no graph.
+export type WorkflowListItem = {
+  id: string;
+  name: string;
+  createdAt: string;   // JSON has no Date — these are ISO strings over the wire
+  updatedAt: string;
+};
+export type WorkflowListResponse = { workflows: WorkflowListItem[] };
+
+// ── Create returns the same shape as a list item (aliased, per your rule).
+export type CreateWorkflowResponse = { workflow: WorkflowListItem };
+
+// ── Detail: metadata + graph.
+export type WorkflowNode = {
+  id: string;
+  type: "trigger" | "http" | "delay" | "condition" | "transform";
+  config: unknown;      // Json column — shape is per-node-type, refined Day 9
+  positionX: number;
+  positionY: number;
+};
+export type WorkflowEdge = {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  branchLabel: string | null;
+};
+export type WorkflowDetail = WorkflowListItem & {
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+};
+
+export type WorkflowDetailResponse = { workflow: WorkflowDetail };
+
 export type LoginInput = z.infer<typeof loginSchema>;
 
 // user shape returned by register / login / me
@@ -55,12 +93,16 @@ export interface InternalApiError {
   code: "INTERNAL_ERROR";
   message: string;
 }
+export type NotFoundApiError = { type: "not_found"; code: "NOT_FOUND"; message: string };
+
 export type ApiError =
   | ValidationApiError
   | BadRequestApiError
   | ConflictApiError
   | UnauthorizedApiError
+  | NotFoundApiError
   | InternalApiError;
+
 export interface ApiErrorResponse {
   error: ApiError;
 }

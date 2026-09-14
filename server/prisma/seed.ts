@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import bcrypt from 'bcryptjs'                              // ← add
 import { PrismaClient } from '../src/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
@@ -6,12 +7,13 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
 
 async function main() {
-  // deleting the user cascades through everything downstream
   await prisma.user.deleteMany()
 
+  const passwordHash = await bcrypt.hash('password123', 12) // ← real hash, cost 12
   const user = await prisma.user.create({
-    data: { email: 'demo@fluxion.dev', passwordHash: 'REPLACED_ON_DAY_3' },
+    data: { email: 'demo@fluxion.dev', passwordHash },      // ← use it
   })
+  // ...everything below unchanged
 
   const workflow = await prisma.workflow.create({
     data: { userId: user.id, name: 'Demo: fetch + delay' },

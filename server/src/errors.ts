@@ -48,7 +48,20 @@ export class UnauthorizedError extends AppError {
     super(message);
     this.name = "UnauthorizedError";
   }
+  
   toApiError(): ApiError {
     return { type: "unauthorized", code: this.code, message: this.message };
+  }
+}
+
+export class NotFoundError extends AppError {
+  readonly status = 404;
+
+  toApiError(): ApiError {
+    return {
+      type: "not_found",
+      code: "NOT_FOUND",
+      message: "Not found",
+    };
   }
 }

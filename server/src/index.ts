@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import type { HealthResponse } from "@fluxion/shared";
 import { authRouter } from "./routes/auth";
 import { errorHandler } from "./middleware/errorHandler";
+import { workflows } from "./routes/workflows";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -19,6 +20,8 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/auth", authRouter);
+
+app.use("/workflows", workflows);
 
 app.use(errorHandler);
 
