@@ -95,6 +95,30 @@ export type TransformConfig = z.infer<typeof transformConfigSchema>;
 export type TriggerConfig = z.infer<typeof triggerConfigSchema>;
 
 // Base fields every graph node carries. Spread into each union member (DRY).
+// ---- Day 10: run-time validation contract ----
+export const strictConfigSchemas: Record<NodeType, z.ZodType> = {
+  trigger: triggerConfigSchema,
+  http: httpConfigSchema,
+  delay: delayConfigSchema,
+  condition: conditionConfigSchema,
+  transform: transformConfigSchema,
+};
+
+export interface ConfigIssue {
+  path: string;    // Zod issue path joined with "." ("" = whole config object)
+  message: string;
+}
+export type GraphProblem =
+  | { kind: "no_trigger" }
+  | { kind: "multiple_triggers"; nodeIds: string[] }
+  | { kind: "trigger_has_incoming"; nodeId: string }
+  | { kind: "cycle"; nodeIds: string[] }            // exact cycle path
+  | { kind: "unreachable"; nodeId: string }
+  | { kind: "invalid_config"; nodeId: string; issues: ConfigIssue[] };
+
+export type GraphValidationResult =
+  | { ok: true; order: string[] }                    // topological order (node ids)
+  | { ok: false; problems: GraphProblem[] };
 
 const graphNodeBase = {
   id: z.string().min(1),
