@@ -1,7 +1,8 @@
 import 'dotenv/config'
-import bcrypt from 'bcryptjs'                              // ← add
+import bcrypt from 'bcryptjs'
 import { PrismaClient } from '../src/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { httpConfigSchema } from '@fluxion/shared'
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
@@ -11,12 +12,12 @@ async function main() {
 
   const passwordHash = await bcrypt.hash('password123', 12) // ← real hash, cost 12
   const user = await prisma.user.create({
-    data: { email: 'demo@fluxion.dev', passwordHash },      // ← use it
+    data: { email: 'demo@fluxion.dev', passwordHash },
   })
-  // ...everything below unchanged
 
   const workflow = await prisma.workflow.create({
-    data: { userId: user.id, name: 'Demo: fetch + delay' },
+    // stable id → detail URL is always /workflows/demo-workflow (drop `id` if you don't want it)
+    data: { id: 'demo-workflow', userId: user.id, name: 'Demo: fetch + delay' },
   })
 
   const trigger = await prisma.node.create({
@@ -55,6 +56,8 @@ async function main() {
   })
 
   console.log(`Seeded ${user.email} · workflow "${workflow.name}" · 1 run · 4 node-runs`)
+  console.log("A", httpConfigSchema.partial().safeParse({}).success);        // want true
+  console.log("B", httpConfigSchema.partial().safeParse({ ms: 5 }).success); // want false
 }
 
 main()

@@ -1,5 +1,5 @@
 // client/src/pages/LoginPage.tsx
-import { useState, type FormEvent } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { useNavigate, Link } from "react-router";
 import type { ApiError } from "@fluxion/shared";
 import { useAuth } from "../auth/AuthContext";
@@ -13,8 +13,8 @@ export function LoginPage() {
   const [error, setError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+async function onSubmit(e: SyntheticEvent) {
+  e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {

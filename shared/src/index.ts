@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-// ---- Health (Day 1) ----
+// ---------- health ----------
 export const healthResponseSchema = z.object({ status: z.literal("ok") });
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
-// ---- Request contracts ----
+// ---------- auth ----------
 export const registerSchema = z.object({
   email: z.email({ error: "Invalid email address" }),
   password: z
@@ -18,29 +18,43 @@ export const loginSchema = z.object({
   email: z.email({ error: "Invalid email address" }),
   password: z.string().min(1, { error: "Password is required" }),
 });
+export type LoginInput = z.infer<typeof loginSchema>;
 
+export interface AuthUser {
+  id: string;
+  email: string;
+}
+
+// ---------- workflows: create ----------
 export const createWorkflowSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120, "Name too long"),
 });
 export type CreateWorkflowInput = z.infer<typeof createWorkflowSchema>;
 
-// ── List item / create response: metadata only, no graph.
 export type WorkflowListItem = {
   id: string;
   name: string;
-  createdAt: string;   // JSON has no Date — these are ISO strings over the wire
+  createdAt: string; // ISO string over the wire
   updatedAt: string;
 };
 export type WorkflowListResponse = { workflows: WorkflowListItem[] };
-
-// ── Create returns the same shape as a list item (aliased, per your rule).
 export type CreateWorkflowResponse = { workflow: WorkflowListItem };
 
-// ── Detail: metadata + graph.
+// ---------- node type (single source of truth) ----------
+export const nodeTypeSchema = z.enum([
+  "trigger",
+  "http",
+  "delay",
+  "condition",
+  "transform",
+]);
+export type NodeType = z.infer<typeof nodeTypeSchema>;
+
+// ---------- workflow detail (response shapes) ----------
 export type WorkflowNode = {
   id: string;
-  type: "trigger" | "http" | "delay" | "condition" | "transform";
-  config: unknown;      // Json column — shape is per-node-type, refined Day 9
+  type: NodeType;
+  config: unknown;
   positionX: number;
   positionY: number;
 };
@@ -54,18 +68,67 @@ export type WorkflowDetail = WorkflowListItem & {
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
 };
-
 export type WorkflowDetailResponse = { workflow: WorkflowDetail };
 
-export type LoginInput = z.infer<typeof loginSchema>;
 
-// user shape returned by register / login / me
-export interface AuthUser {
-  id: string;
-  email: string;
-}
 
-// ---- API error contract ----
+
+export const httpConfigSchema = z.strictObject({
+  method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
+  url: z.url(),                       // v4 top-level; z.string().url() is deprecated
+});
+export const delayConfigSchema = z.strictObject({
+  ms: z.int().positive(),            // v4: z.int() rejects non-integers up front
+});
+export const conditionConfigSchema = z.strictObject({
+  expression: z.string().min(1),     // z.string() alone accepts "" — .min(1) is deliberate
+});
+export const transformConfigSchema = z.strictObject({
+  mapping: z.string().min(1),
+});
+export const triggerConfigSchema = z.strictObject({}); // nothing to configure
+
+export type HttpConfig = z.infer<typeof httpConfigSchema>;
+export type DelayConfig = z.infer<typeof delayConfigSchema>;
+export type ConditionConfig = z.infer<typeof conditionConfigSchema>;
+export type TransformConfig = z.infer<typeof transformConfigSchema>;
+export type TriggerConfig = z.infer<typeof triggerConfigSchema>;
+
+// Base fields every graph node carries. Spread into each union member (DRY).
+
+const graphNodeBase = {
+  id: z.string().min(1),
+  positionX: z.number(),
+  positionY: z.number(),
+};
+
+// SAVE = "structurally coherent draft": right shape for the type, fields may be absent.
+// .partial() relaxes PRESENCE; strictObject still rejects foreign keys. Blank == absent.
+export const graphNodeSchema = z.discriminatedUnion("type", [
+  z.object({ ...graphNodeBase, type: z.literal("http"),      config: httpConfigSchema.partial() }),
+  z.object({ ...graphNodeBase, type: z.literal("delay"),     config: delayConfigSchema.partial() }),
+  z.object({ ...graphNodeBase, type: z.literal("condition"), config: conditionConfigSchema.partial() }),
+  z.object({ ...graphNodeBase, type: z.literal("transform"), config: transformConfigSchema.partial() }),
+  z.object({ ...graphNodeBase, type: z.literal("trigger"),   config: triggerConfigSchema.partial() }),
+]);
+
+
+export const graphEdgeSchema = z.object({
+  id: z.string().min(1),
+  sourceNodeId: z.string().min(1),
+  targetNodeId: z.string().min(1),
+  branchLabel: z.string().nullable().optional(), // no branching UI until Day 13; client omits it
+});
+export const saveGraphSchema = z.object({
+  nodes: z.array(graphNodeSchema),
+  edges: z.array(graphEdgeSchema),
+});
+export type GraphNodeInput = z.infer<typeof graphNodeSchema>;
+export type GraphEdgeInput = z.infer<typeof graphEdgeSchema>;
+export type SaveGraphRequest = z.infer<typeof saveGraphSchema>;
+// Response reuses WorkflowDetailResponse — the saved graph, same shape as GET /:id.
+
+// ---------- errors ----------
 export interface ValidationApiError {
   type: "validation";
   code: "VALIDATION_ERROR";
@@ -93,7 +156,11 @@ export interface InternalApiError {
   code: "INTERNAL_ERROR";
   message: string;
 }
-export type NotFoundApiError = { type: "not_found"; code: "NOT_FOUND"; message: string };
+export type NotFoundApiError = {
+  type: "not_found";
+  code: "NOT_FOUND";
+  message: string;
+};
 
 export type ApiError =
   | ValidationApiError

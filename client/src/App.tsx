@@ -5,7 +5,7 @@ import { PublicOnlyRoute } from "./routes/PublicOnlyRoute.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { RegisterPage } from "./pages/RegisterPage.tsx";
 import { DashboardPage } from "./pages/DashboardPage.tsx";
-import { WorkflowDetailPage } from "./pages/WorkflowDetailPage.tsx";
+import WorkflowDetailPage from "./pages/WorkflowDetailPage";
 
 export function App() {
   return (

@@ -1,22 +1,40 @@
-// client/src/pages/WorkflowDetailPage.tsx — placeholder until Day 7 (canvas)
 import { useParams, Link } from "react-router";
-import type { WorkflowDetailResponse } from "@fluxion/shared";
 import { useApiQuery } from "../lib/useApiQuery";
+import type { WorkflowDetailResponse } from "@fluxion/shared";
+import { WorkflowCanvas } from "./WorkflowCanvas";
 
-export function WorkflowDetailPage() {
+export default function WorkflowDetailPage() {
   const { id } = useParams();
-  const query = useApiQuery<WorkflowDetailResponse>(`/workflows/${id}`);
+  const state = useApiQuery<WorkflowDetailResponse>(`/workflows/${id}`);
 
-  if (query.status === "loading") return <p className="screen">Loading…</p>;
-  if (query.status === "error") return <p className="screen form-error">Not found.</p>;
+  if (state.status === "loading") return <p className="muted">Loading workflow…</p>;
+  if (state.status === "error") {
+    return (
+      <div className="screen">
+        <p>Workflow not found.</p>
+        <Link className="link" to="/">← Back to dashboard</Link>
+      </div>
+    );
+  }
 
-  const { workflow } = query.data;
+  const detail = state.data.workflow;
+  const isEmpty = detail.nodes.length === 0;
+
   return (
     <div className="screen wide">
-      <Link to="/">← Back</Link>
-      <h1>{workflow.name}</h1>
-      <p className="muted">{workflow.nodes.length} nodes · {workflow.edges.length} edges</p>
-      <p>Canvas comes Day 7.</p>
+      <header className="row">
+        <h1>{detail.name}</h1>
+        <Link className="link" to="/">← Dashboard</Link>
+      </header>
+
+      {isEmpty ? (
+        <p className="empty">This workflow has no nodes yet.</p>
+      ) : (
+        // The sized container. Explicit height so React Flow doesn't collapse to 0px.
+        <div style={{ height: "calc(100vh - 160px)", border: "1px solid #ddd", borderRadius: 8 }}>
+          <WorkflowCanvas detail={detail} />
+        </div>
+      )}
     </div>
   );
 }
